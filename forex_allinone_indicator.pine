@@ -1,0 +1,261 @@
+// ============================================================
+// All-In-One Forex Strategy Indicator
+// Combines: EMA Trend, RSI, MACD, Bollinger Bands, ADX
+// Shows: Direction, Entry, Stop Loss, Take Profit
+// ============================================================
+//@version=5
+indicator("All-In-One Forex Strategy", overlay=true, max_lines_count=500, max_labels_count=500)
+
+// ============================================================
+// INPUTS
+// ============================================================
+
+// Moving Averages
+fast_len   = input.int(9,  "Fast EMA",   group="Moving Averages")
+slow_len   = input.int(21, "Slow EMA",   group="Moving Averages")
+trend_len  = input.int(50, "Trend EMA",  group="Moving Averages")
+
+// RSI
+rsi_len = input.int(14, "RSI Length",    group="RSI")
+rsi_ob  = input.int(70, "Overbought",    group="RSI")
+rsi_os  = input.int(30, "Oversold",      group="RSI")
+
+// MACD
+macd_fast   = input.int(12, "MACD Fast",   group="MACD")
+macd_slow   = input.int(26, "MACD Slow",   group="MACD")
+macd_sig    = input.int(9,  "MACD Signal", group="MACD")
+
+// Bollinger Bands
+bb_len  = input.int(20,   "BB Length",     group="Bollinger Bands")
+bb_mult = input.float(2.0, "BB Multiplier", group="Bollinger Bands")
+
+// ADX
+adx_len    = input.int(14, "ADX Length",    group="ADX")
+adx_thresh = input.int(20, "ADX Threshold (trend strength)", group="ADX")
+
+// Risk Management
+atr_len = input.int(14,   "ATR Length",          group="Risk Management")
+sl_mult = input.float(1.5, "SL ATR Multiplier",   group="Risk Management")
+tp_rr   = input.float(2.0, "Risk:Reward Ratio",   group="Risk Management")
+
+// ============================================================
+// INDICATOR CALCULATIONS
+// ============================================================
+
+// EMAs
+fast_ema  = ta.ema(close, fast_len)
+slow_ema  = ta.ema(close, slow_len)
+trend_ema = ta.ema(close, trend_len)
+
+// RSI
+rsi = ta.rsi(close, rsi_len)
+
+// MACD
+[macd_line, signal_line, hist] = ta.macd(close, macd_fast, macd_slow, macd_sig)
+
+// Bollinger Bands
+[bb_upper, bb_basis, bb_lower] = ta.bb(close, bb_len, bb_mult)
+
+// ADX
+[diplus, diminus, adx] = ta.dmi(adx_len, adx_len)
+
+// ATR
+atr = ta.atr(atr_len)
+
+// ============================================================
+// SIGNAL CONDITIONS
+// ============================================================
+
+// EMA alignment
+ema_bull = fast_ema > slow_ema and slow_ema > trend_ema
+ema_bear = fast_ema < slow_ema and slow_ema < trend_ema
+
+// EMA crossovers (trigger)
+ema_cross_up = ta.crossover(fast_ema, slow_ema)
+ema_cross_dn = ta.crossunder(fast_ema, slow_ema)
+
+// RSI
+rsi_bull = rsi > 50 and rsi < rsi_ob
+rsi_bear = rsi < 50 and rsi > rsi_os
+
+// MACD
+macd_bull     = macd_line > signal_line and hist > 0
+macd_bear     = macd_line < signal_line and hist < 0
+macd_cross_up = ta.crossover(macd_line, signal_line)
+macd_cross_dn = ta.crossunder(macd_line, signal_line)
+
+// Bollinger Bands
+bb_bull = close > bb_basis
+bb_bear = close < bb_basis
+
+// ADX
+strong_trend = adx > adx_thresh
+bull_di      = diplus > diminus
+bear_di      = diminus > diplus
+
+// Price vs trend EMA
+price_bull = close > trend_ema
+price_bear = close < trend_ema
+
+// ============================================================
+// CONFLUENCE SCORE (max 8)
+// ============================================================
+bull_score = (ema_bull      ? 2 : 0)
+           + (rsi_bull       ? 1 : 0)
+           + (macd_bull      ? 1 : 0)
+           + (bb_bull        ? 1 : 0)
+           + (strong_trend and bull_di ? 2 : 0)
+           + (price_bull     ? 1 : 0)
+
+bear_score = (ema_bear      ? 2 : 0)
+           + (rsi_bear       ? 1 : 0)
+           + (macd_bear      ? 1 : 0)
+           + (bb_bear        ? 1 : 0)
+           + (strong_trend and bear_di ? 2 : 0)
+           + (price_bear     ? 1 : 0)
+
+// ============================================================
+// BUY / SELL TRIGGERS  (confluence >= 5 required)
+// ============================================================
+buy_signal  = (ema_cross_up or macd_cross_up) and bull_score >= 5 and barstate.isconfirmed
+sell_signal = (ema_cross_dn or macd_cross_dn) and bear_score >= 5 and barstate.isconfirmed
+
+// ============================================================
+// SL / TP LEVELS
+// ============================================================
+var float entry_price = na
+var float sl_price    = na
+var float tp_price    = na
+var int   last_dir    = 0   // 1 = long, -1 = short
+
+if buy_signal
+    entry_price := close
+    sl_price    := close - sl_mult * atr
+    tp_price    := close + sl_mult * atr * tp_rr
+    last_dir    := 1
+
+if sell_signal
+    entry_price := close
+    sl_price    := close + sl_mult * atr
+    tp_price    := close - sl_mult * atr * tp_rr
+    last_dir    := -1
+
+// ============================================================
+// VISUALS — EMAs & Bollinger Bands
+// ============================================================
+plot(fast_ema,  "Fast EMA",  color=color.new(color.aqua,   0), linewidth=1)
+plot(slow_ema,  "Slow EMA",  color=color.new(color.orange, 0), linewidth=1)
+plot(trend_ema, "Trend EMA", color=color.new(color.gray,  30), linewidth=2)
+
+p_bb_upper = plot(bb_upper, "BB Upper", color=color.new(color.purple, 60))
+p_bb_lower = plot(bb_lower, "BB Lower", color=color.new(color.purple, 60))
+fill(p_bb_upper, p_bb_lower, color=color.new(color.purple, 90))
+
+// ============================================================
+// VISUALS — Entry Arrows
+// ============================================================
+plotshape(buy_signal,  title="BUY",  shape=shape.labelup,
+          location=location.belowbar, color=color.new(color.green, 0),
+          size=size.normal, text="BUY", textcolor=color.white)
+
+plotshape(sell_signal, title="SELL", shape=shape.labeldown,
+          location=location.abovebar, color=color.new(color.red, 0),
+          size=size.normal, text="SELL", textcolor=color.white)
+
+// ============================================================
+// VISUALS — SL / TP Horizontal Lines & Labels
+// ============================================================
+var line sl_line    = na
+var line tp_line    = na
+var line entry_line = na
+
+if buy_signal or sell_signal
+    // Remove previous lines
+    if not na(sl_line)
+        line.delete(sl_line)
+    if not na(tp_line)
+        line.delete(tp_line)
+    if not na(entry_line)
+        line.delete(entry_line)
+
+    entry_line := line.new(bar_index, entry_price, bar_index + 60, entry_price,
+                           color=color.yellow, width=2, style=line.style_dotted)
+    sl_line    := line.new(bar_index, sl_price,    bar_index + 60, sl_price,
+                           color=color.red,    width=2, style=line.style_dashed)
+    tp_line    := line.new(bar_index, tp_price,    bar_index + 60, tp_price,
+                           color=color.green,  width=2, style=line.style_dashed)
+
+    // Labels
+    label.new(bar_index + 1, entry_price,
+              "ENTRY: " + str.tostring(entry_price, "#.#####"),
+              color=color.new(color.yellow, 20), textcolor=color.black,
+              style=label.style_label_left, size=size.small)
+
+    label.new(bar_index + 1, sl_price,
+              "SL: "    + str.tostring(sl_price,    "#.#####"),
+              color=color.new(color.red,    20), textcolor=color.white,
+              style=label.style_label_left, size=size.small)
+
+    label.new(bar_index + 1, tp_price,
+              "TP: "    + str.tostring(tp_price,    "#.#####"),
+              color=color.new(color.green,  20), textcolor=color.white,
+              style=label.style_label_left, size=size.small)
+
+// ============================================================
+// INFO TABLE (top-right corner)
+// ============================================================
+var table tbl = table.new(position.top_right, 2, 9,
+                           bgcolor=color.new(color.black, 65),
+                           border_color=color.gray, border_width=1,
+                           frame_color=color.gray, frame_width=1)
+
+if barstate.islast
+    dir_text  = bull_score > bear_score ? "▲ BULLISH" :
+                bear_score > bull_score ? "▼ BEARISH" : "◆ NEUTRAL"
+    dir_color = bull_score > bear_score ? color.lime :
+                bear_score > bull_score ? color.red  : color.gray
+
+    // Header
+    table.cell(tbl, 0, 0, "INDICATOR",   text_color=color.white,
+               bgcolor=color.new(color.navy, 20), text_size=size.small)
+    table.cell(tbl, 1, 0, "VALUE",       text_color=color.white,
+               bgcolor=color.new(color.navy, 20), text_size=size.small)
+
+    table.cell(tbl, 0, 1, "Direction",   text_color=color.white,  text_size=size.small)
+    table.cell(tbl, 1, 1, dir_text,      text_color=dir_color,    text_size=size.small)
+
+    table.cell(tbl, 0, 2, "Bull Score",  text_color=color.white,  text_size=size.small)
+    table.cell(tbl, 1, 2, str.tostring(bull_score) + " / 8",
+               text_color=color.lime,  text_size=size.small)
+
+    table.cell(tbl, 0, 3, "Bear Score",  text_color=color.white,  text_size=size.small)
+    table.cell(tbl, 1, 3, str.tostring(bear_score) + " / 8",
+               text_color=color.red,   text_size=size.small)
+
+    table.cell(tbl, 0, 4, "ADX",         text_color=color.white,  text_size=size.small)
+    table.cell(tbl, 1, 4, str.tostring(math.round(adx, 1)) + (strong_trend ? "  Strong" : "  Weak"),
+               text_color=strong_trend ? color.lime : color.orange, text_size=size.small)
+
+    table.cell(tbl, 0, 5, "RSI",         text_color=color.white,  text_size=size.small)
+    table.cell(tbl, 1, 5, str.tostring(math.round(rsi, 1)),
+               text_color=rsi > rsi_ob ? color.red :
+                           rsi < rsi_os ? color.lime : color.white,
+               text_size=size.small)
+
+    table.cell(tbl, 0, 6, "MACD",        text_color=color.white,  text_size=size.small)
+    table.cell(tbl, 1, 6, hist > 0 ? "Bullish" : "Bearish",
+               text_color=hist > 0 ? color.lime : color.red, text_size=size.small)
+
+    table.cell(tbl, 0, 7, "Last SL",     text_color=color.white,  text_size=size.small)
+    table.cell(tbl, 1, 7, na(sl_price) ? "—" : str.tostring(sl_price, "#.#####"),
+               text_color=color.red, text_size=size.small)
+
+    table.cell(tbl, 0, 8, "Last TP",     text_color=color.white,  text_size=size.small)
+    table.cell(tbl, 1, 8, na(tp_price) ? "—" : str.tostring(tp_price, "#.#####"),
+               text_color=color.lime, text_size=size.small)
+
+// ============================================================
+// ALERTS
+// ============================================================
+alertcondition(buy_signal,  "BUY Signal",  "All-In-One Forex: BUY signal — check Entry, SL, TP levels")
+alertcondition(sell_signal, "SELL Signal", "All-In-One Forex: SELL signal — check Entry, SL, TP levels")
