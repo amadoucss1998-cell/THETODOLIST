@@ -6,6 +6,7 @@ import {
   Category,
   Priority,
   ViewType,
+  SortOrder,
   Stats,
 } from '../types';
 import { isToday, isFuture, addDays, startOfDay, parseISO } from 'date-fns';
@@ -19,6 +20,7 @@ interface TodoStore {
   activeCategoryId: string | null;
   searchQuery: string;
   filterPriority: Priority | null;
+  sortOrder: SortOrder;
   isModalOpen: boolean;
   editingTask: Task | null;
   sidebarOpen: boolean;
@@ -40,6 +42,7 @@ interface TodoStore {
   setActiveCategoryId: (id: string | null) => void;
   setSearchQuery: (query: string) => void;
   setFilterPriority: (priority: Priority | null) => void;
+  setSortOrder: (order: SortOrder) => void;
   openModal: (task?: Task | null) => void;
   closeModal: () => void;
   toggleSidebar: () => void;
@@ -190,6 +193,7 @@ export const useTodoStore = create<TodoStore>()(
       activeCategoryId: null,
       searchQuery: '',
       filterPriority: null,
+      sortOrder: 'smart',
       isModalOpen: false,
       editingTask: null,
       sidebarOpen: true,
@@ -314,16 +318,16 @@ export const useTodoStore = create<TodoStore>()(
       setActiveCategoryId: (id) => set({ activeCategoryId: id, activeView: 'all', filterPriority: null }),
       setSearchQuery: (query) => set({ searchQuery: query }),
       setFilterPriority: (priority) => set({ filterPriority: priority }),
+      setSortOrder: (order) => set({ sortOrder: order }),
 
       openModal: (task = null) => set({ isModalOpen: true, editingTask: task }),
       closeModal: () => set({ isModalOpen: false, editingTask: null }),
       toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
 
       getFilteredTasks: () => {
-        const { tasks, activeView, activeCategoryId, searchQuery, filterPriority } = get();
+        const { tasks, activeView, activeCategoryId, searchQuery, filterPriority, sortOrder } = get();
         let filtered = [...tasks];
 
-        // View filter
         if (activeCategoryId) {
           filtered = filtered.filter((t) => t.categoryId === activeCategoryId);
         } else {
@@ -351,7 +355,6 @@ export const useTodoStore = create<TodoStore>()(
           }
         }
 
-        // Search filter
         if (searchQuery.trim()) {
           const q = searchQuery.toLowerCase();
           filtered = filtered.filter(
@@ -362,21 +365,36 @@ export const useTodoStore = create<TodoStore>()(
           );
         }
 
-        // Priority filter
         if (filterPriority) {
           filtered = filtered.filter((t) => t.priority === filterPriority);
         }
 
-        // Sort: incomplete first, then by priority weight, then by due date, then by order
         const priorityWeight: Record<string, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
+
         return filtered.sort((a, b) => {
           if (a.completed !== b.completed) return a.completed ? 1 : -1;
-          const pw = priorityWeight[a.priority] - priorityWeight[b.priority];
-          if (pw !== 0) return pw;
-          if (a.dueDate && b.dueDate) return a.dueDate.localeCompare(b.dueDate);
-          if (a.dueDate) return -1;
-          if (b.dueDate) return 1;
-          return a.order - b.order;
+
+          switch (sortOrder) {
+            case 'dueDate':
+              if (a.dueDate && b.dueDate) return a.dueDate.localeCompare(b.dueDate);
+              if (a.dueDate) return -1;
+              if (b.dueDate) return 1;
+              return a.order - b.order;
+            case 'priority':
+              return priorityWeight[a.priority] - priorityWeight[b.priority];
+            case 'alpha':
+              return a.title.localeCompare(b.title);
+            case 'created':
+              return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+            default: {
+              const pw = priorityWeight[a.priority] - priorityWeight[b.priority];
+              if (pw !== 0) return pw;
+              if (a.dueDate && b.dueDate) return a.dueDate.localeCompare(b.dueDate);
+              if (a.dueDate) return -1;
+              if (b.dueDate) return 1;
+              return a.order - b.order;
+            }
+          }
         });
       },
 

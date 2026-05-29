@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Plus, Menu, X, SlidersHorizontal } from 'lucide-react';
+import { Search, Plus, Menu, X, SlidersHorizontal, ArrowUpDown } from 'lucide-react';
 import { useTodoStore } from '../store/todoStore';
-import { Priority, ViewType, PRIORITY_CONFIG } from '../types';
+import { Priority, ViewType, SortOrder, PRIORITY_CONFIG } from '../types';
 
 const VIEW_LABELS: Record<ViewType, string> = {
   all: 'All Tasks',
@@ -22,6 +22,14 @@ const VIEW_SUBTITLES: Record<ViewType, string> = {
 
 const PRIORITIES: Priority[] = ['urgent', 'high', 'medium', 'low'];
 
+const SORT_OPTIONS: { id: SortOrder; label: string }[] = [
+  { id: 'smart', label: '✨ Smart (default)' },
+  { id: 'dueDate', label: '📅 Due date' },
+  { id: 'priority', label: '🔥 Priority' },
+  { id: 'alpha', label: '🔤 A → Z' },
+  { id: 'created', label: '🕐 Date created' },
+];
+
 export default function Header() {
   const {
     activeView,
@@ -29,8 +37,10 @@ export default function Header() {
     categories,
     searchQuery,
     filterPriority,
+    sortOrder,
     setSearchQuery,
     setFilterPriority,
+    setSortOrder,
     openModal,
     toggleSidebar,
     getFilteredTasks,
@@ -38,6 +48,8 @@ export default function Header() {
 
   const [showSearch, setShowSearch] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const [showSort, setShowSort] = useState(false);
+  const sortDropdownRef = useRef<HTMLDivElement>(null);
 
   const activeCategory = categories.find((c) => c.id === activeCategoryId);
   const filteredCount = getFilteredTasks().length;
@@ -47,7 +59,6 @@ export default function Header() {
     ? `${filteredCount} task${filteredCount !== 1 ? 's' : ''} in this category`
     : VIEW_SUBTITLES[activeView];
 
-  // Keyboard shortcut: N to open new task modal
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (
@@ -60,10 +71,29 @@ export default function Header() {
         e.preventDefault();
         openModal();
       }
+      if (
+        e.key === '/' &&
+        !(e.target instanceof HTMLInputElement) &&
+        !(e.target instanceof HTMLTextAreaElement)
+      ) {
+        e.preventDefault();
+        setShowSearch(true);
+      }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [openModal]);
+
+  // Close sort dropdown when clicking outside
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (sortDropdownRef.current && !sortDropdownRef.current.contains(e.target as Node)) {
+        setShowSort(false);
+      }
+    };
+    if (showSort) document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showSort]);
 
   return (
     <header className="px-6 pt-6 pb-4 flex-shrink-0">
@@ -128,6 +158,67 @@ export default function Header() {
             )}
           </button>
 
+          {/* Sort dropdown */}
+          <div className="relative" ref={sortDropdownRef}>
+            <button
+              onClick={() => setShowSort(!showSort)}
+              className="w-9 h-9 rounded-xl flex items-center justify-center transition-all"
+              style={{
+                background: sortOrder !== 'smart' ? 'rgba(139,92,246,0.15)' : 'rgba(255,255,255,0.05)',
+                border: sortOrder !== 'smart'
+                  ? '1px solid rgba(139,92,246,0.3)'
+                  : '1px solid rgba(255,255,255,0.08)',
+                color: sortOrder !== 'smart' ? '#a78bfa' : 'rgba(255,255,255,0.4)',
+              }}
+              title="Sort tasks"
+            >
+              <ArrowUpDown size={17} />
+            </button>
+
+            <AnimatePresence>
+              {showSort && (
+                <motion.div
+                  initial={{ opacity: 0, y: -8, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -8, scale: 0.95 }}
+                  transition={{ duration: 0.15 }}
+                  className="absolute right-0 top-11 w-52 rounded-xl overflow-hidden z-50"
+                  style={{
+                    background: 'linear-gradient(145deg, #16162a, #12121f)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    boxShadow: '0 16px 40px rgba(0,0,0,0.7)',
+                  }}
+                >
+                  {SORT_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.id}
+                      onClick={() => {
+                        setSortOrder(opt.id);
+                        setShowSort(false);
+                      }}
+                      className="w-full flex items-center gap-2 px-3.5 py-2.5 text-sm text-left transition-colors"
+                      style={{
+                        background: sortOrder === opt.id ? 'rgba(139,92,246,0.18)' : 'transparent',
+                        color: sortOrder === opt.id ? '#a78bfa' : 'rgba(255,255,255,0.6)',
+                        fontWeight: sortOrder === opt.id ? 600 : 400,
+                      }}
+                      onMouseEnter={(e) => {
+                        if (sortOrder !== opt.id)
+                          (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.06)';
+                      }}
+                      onMouseLeave={(e) => {
+                        if (sortOrder !== opt.id)
+                          (e.currentTarget as HTMLButtonElement).style.background = 'transparent';
+                      }}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
           {/* Add task button */}
           <button
             onClick={() => openModal()}
@@ -155,7 +246,7 @@ export default function Header() {
               />
               <input
                 className="input-glass pl-10 pr-4 py-2.5"
-                placeholder="Search tasks, tags, descriptions..."
+                placeholder="Search tasks, tags, descriptions…"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 autoFocus

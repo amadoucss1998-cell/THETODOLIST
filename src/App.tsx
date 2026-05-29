@@ -3,6 +3,8 @@ import Header from './components/Header';
 import StatsBar from './components/StatsBar';
 import TaskList from './components/TaskList';
 import TaskModal from './components/TaskModal';
+import QuickAddBar from './components/QuickAddBar';
+import KeyboardShortcuts from './components/KeyboardShortcuts';
 
 export default function App() {
   return (
@@ -48,10 +50,14 @@ export default function App() {
         <Header />
         <StatsBar />
         <TaskList />
+        <QuickAddBar />
       </main>
 
       {/* Task Modal */}
       <TaskModal />
+
+      {/* Keyboard Shortcuts Panel */}
+      <KeyboardShortcuts />
     </div>
   );
 }

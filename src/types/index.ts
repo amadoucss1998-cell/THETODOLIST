@@ -1,5 +1,6 @@
 export type Priority = 'urgent' | 'high' | 'medium' | 'low';
 export type ViewType = 'all' | 'today' | 'upcoming' | 'completed' | 'starred';
+export type SortOrder = 'smart' | 'dueDate' | 'priority' | 'alpha' | 'created';
 
 export interface Subtask {
   id: string;
