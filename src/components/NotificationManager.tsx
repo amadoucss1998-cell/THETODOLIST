@@ -31,14 +31,13 @@ export default function NotificationManager() {
           dueToday.length > 0 ? `, ${dueToday.length} due today` : ''
         }.`;
 
-    if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+    // Use native Electron notifications when available (Windows desktop app)
+    const electron = (window as any).electronAPI;
+    if (electron?.isElectron) {
+      electron.notify(title, body);
+    } else if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
       try {
-        new Notification(title, {
-          body,
-          icon: './favicon.svg',
-          tag: 'taskflow-reminder',
-          renotify: true,
-        });
+        new Notification(title, { body, icon: './favicon.svg', tag: 'taskflow-reminder' });
       } catch (_) {}
     }
 
