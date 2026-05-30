@@ -2,6 +2,15 @@ export type Priority = 'urgent' | 'high' | 'medium' | 'low';
 export type ViewType = 'all' | 'today' | 'upcoming' | 'completed' | 'starred';
 export type SortOrder = 'smart' | 'dueDate' | 'priority' | 'alpha' | 'created';
 
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+  passwordHash: string;
+  avatarColor: string;
+  createdAt: string;
+}
+
 export interface Subtask {
   id: string;
   title: string;
@@ -10,6 +19,7 @@ export interface Subtask {
 
 export interface Task {
   id: string;
+  userId?: string;
   title: string;
   description: string;
   completed: boolean;
@@ -69,3 +79,8 @@ export const PRIORITY_CONFIG: Record<Priority, { label: string; color: string; b
     glow: '0 0 12px rgba(46,213,115,0.3)',
   },
 };
+
+export const AVATAR_COLORS = [
+  '#8b5cf6', '#4f8ef7', '#2ed573', '#ff6348',
+  '#ffd32a', '#06d6a0', '#f72585', '#4cc9f0',
+];
