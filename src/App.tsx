@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import StatsBar from './components/StatsBar';
@@ -8,12 +8,14 @@ import QuickAddBar from './components/QuickAddBar';
 import KeyboardShortcuts from './components/KeyboardShortcuts';
 import AuthScreen from './components/AuthScreen';
 import NotificationManager from './components/NotificationManager';
+import JournalPage from './components/JournalPage';
 import { useAuthStore } from './store/authStore';
 import { useTodoStore } from './store/todoStore';
 
 export default function App() {
   const { currentUser } = useAuthStore();
   const { setCurrentUserId } = useTodoStore();
+  const [activeSection, setActiveSection] = useState<'tasks' | 'journal'>('tasks');
 
   useEffect(() => {
     setCurrentUserId(currentUser?.id ?? null);
@@ -29,13 +31,19 @@ export default function App() {
       <div className="bg-blob" style={{ width: 500, height: 500, background: '#4f46e5', bottom: -150, right: -100 }} />
       <div className="bg-blob" style={{ width: 300, height: 300, background: '#06d6a0', top: '50%', right: '25%', opacity: 0.04 }} />
 
-      <Sidebar />
+      <Sidebar activeSection={activeSection} onSectionChange={setActiveSection} />
 
       <main className="flex-1 flex flex-col overflow-hidden relative z-10 min-w-0">
-        <Header />
-        <StatsBar />
-        <TaskList />
-        <QuickAddBar />
+        {activeSection === 'tasks' ? (
+          <>
+            <Header />
+            <StatsBar />
+            <TaskList />
+            <QuickAddBar />
+          </>
+        ) : (
+          <JournalPage />
+        )}
       </main>
 
       <TaskModal />

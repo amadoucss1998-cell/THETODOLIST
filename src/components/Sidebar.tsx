@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   CheckSquare, Sun, Calendar, Star, CheckCircle2,
-  LayoutDashboard, Plus, Trash2, X, ChevronRight, LogOut,
+  LayoutDashboard, Plus, Trash2, X, ChevronRight, LogOut, BookOpen,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useTodoStore } from '../store/todoStore';
@@ -24,7 +24,12 @@ const CATEGORY_COLORS = [
 
 const CATEGORY_ICONS = ['💼', '✨', '💪', '🛍️', '💰', '📚', '🎯', '🏠', '🎨', '🚀'];
 
-export default function Sidebar() {
+interface SidebarProps {
+  activeSection: 'tasks' | 'journal';
+  onSectionChange: (s: 'tasks' | 'journal') => void;
+}
+
+export default function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
   const {
     activeView, activeCategoryId, categories, sidebarOpen,
     setActiveView, setActiveCategoryId, addCategory, deleteCategory,
@@ -93,9 +98,31 @@ export default function Sidebar() {
 
           {/* Scrollable content */}
           <div className="flex-1 overflow-y-auto px-3 pb-4" style={{ scrollbarWidth: 'none' }}>
+            {/* Section switcher */}
+            <div className="mb-5">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-white/25 px-2 mb-2">Sections</p>
+              <nav className="space-y-0.5">
+                <button
+                  className={`nav-item w-full ${activeSection === 'tasks' ? 'active' : ''}`}
+                  onClick={() => onSectionChange('tasks')}
+                >
+                  <LayoutDashboard size={16} />
+                  <span className="flex-1 text-left">Tasks</span>
+                </button>
+                <button
+                  className={`nav-item w-full ${activeSection === 'journal' ? 'active' : ''}`}
+                  onClick={() => onSectionChange('journal')}
+                >
+                  <BookOpen size={16} />
+                  <span className="flex-1 text-left">Journal & Notes</span>
+                </button>
+              </nav>
+            </div>
+
             {/* Navigation */}
+            {activeSection === 'tasks' && (
             <div className="mb-6">
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-white/25 px-2 mb-2">Menu</p>
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-white/25 px-2 mb-2">Views</p>
               <nav className="space-y-0.5">
                 {VIEWS.map(({ id, label, icon: Icon }) => {
                   const count = getViewCount(id);
@@ -115,8 +142,10 @@ export default function Sidebar() {
                 })}
               </nav>
             </div>
+            )}
 
             {/* Categories */}
+            {activeSection === 'tasks' && (
             <div>
               <div className="flex items-center justify-between px-2 mb-2">
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-white/25">Categories</p>
@@ -198,6 +227,7 @@ export default function Sidebar() {
                 })}
               </nav>
             </div>
+            )}
           </div>
 
           {/* User section */}
