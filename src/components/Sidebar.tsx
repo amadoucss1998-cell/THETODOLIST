@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   CheckSquare, Sun, Calendar, Star, CheckCircle2,
-  LayoutDashboard, Plus, Trash2, X, ChevronRight, LogOut, BookOpen, BarChart2,
+  LayoutDashboard, Plus, Trash2, X, ChevronRight, LogOut, BookOpen, BarChart2, Brain,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useTodoStore } from '../store/todoStore';
@@ -25,8 +25,8 @@ const CATEGORY_COLORS = [
 const CATEGORY_ICONS = ['💼', '✨', '💪', '🛍️', '💰', '📚', '🎯', '🏠', '🎨', '🚀'];
 
 interface SidebarProps {
-  activeSection: 'tasks' | 'journal' | 'analytics';
-  onSectionChange: (s: 'tasks' | 'journal' | 'analytics') => void;
+  activeSection: 'tasks' | 'journal' | 'analytics' | 'meditation';
+  onSectionChange: (s: 'tasks' | 'journal' | 'analytics' | 'meditation') => void;
 }
 
 export default function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
@@ -122,6 +122,13 @@ export default function Sidebar({ activeSection, onSectionChange }: SidebarProps
                 >
                   <BarChart2 size={16} />
                   <span className="flex-1 text-left">Analytics</span>
+                </button>
+                <button
+                  className={`nav-item w-full ${activeSection === 'meditation' ? 'active' : ''}`}
+                  onClick={() => onSectionChange('meditation')}
+                >
+                  <Brain size={16} />
+                  <span className="flex-1 text-left">Meditate</span>
                 </button>
               </nav>
             </div>

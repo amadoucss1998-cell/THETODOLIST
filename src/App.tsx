@@ -10,6 +10,7 @@ import AuthScreen from './components/AuthScreen';
 import NotificationManager from './components/NotificationManager';
 import JournalPage from './components/JournalPage';
 import AnalyticsPage from './components/AnalyticsPage';
+import MeditationPage from './components/MeditationPage';
 import PomodoroTimer from './components/PomodoroTimer';
 import { useAuthStore } from './store/authStore';
 import { useTodoStore } from './store/todoStore';
@@ -17,7 +18,7 @@ import { useTodoStore } from './store/todoStore';
 export default function App() {
   const { currentUser } = useAuthStore();
   const { setCurrentUserId } = useTodoStore();
-  const [activeSection, setActiveSection] = useState<'tasks' | 'journal' | 'analytics'>('tasks');
+  const [activeSection, setActiveSection] = useState<'tasks' | 'journal' | 'analytics' | 'meditation'>('tasks');
 
   useEffect(() => {
     setCurrentUserId(currentUser?.id ?? null);
@@ -45,8 +46,10 @@ export default function App() {
           </>
         ) : activeSection === 'journal' ? (
           <JournalPage />
-        ) : (
+        ) : activeSection === 'analytics' ? (
           <AnalyticsPage />
+        ) : (
+          <MeditationPage />
         )}
       </main>
 
