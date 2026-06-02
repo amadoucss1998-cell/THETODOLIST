@@ -30,7 +30,11 @@ const SORT_OPTIONS: { id: SortOrder; label: string }[] = [
   { id: 'created', label: '🕐 Date created' },
 ];
 
-export default function Header() {
+interface HeaderProps {
+  onOpenSearch?: () => void;
+}
+
+export default function Header({ onOpenSearch }: HeaderProps) {
   const {
     activeView,
     activeCategoryId,
@@ -119,6 +123,18 @@ export default function Header() {
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Global search */}
+          {onOpenSearch && (
+            <button
+              onClick={onOpenSearch}
+              title="Global search (⌘K)"
+              className="hidden sm:flex w-9 h-9 rounded-xl items-center justify-center transition-all text-white/40 hover:text-white/70"
+              style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
+            >
+              <Search size={17} />
+            </button>
+          )}
+
           {/* Search toggle */}
           <button
             onClick={() => { setShowSearch(!showSearch); if (showSearch) setSearchQuery(''); }}

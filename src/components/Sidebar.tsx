@@ -1,13 +1,17 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   CheckSquare, Sun, Calendar, Star, CheckCircle2,
-  LayoutDashboard, Plus, Trash2, X, ChevronRight, LogOut, BookOpen, BarChart2, Brain,
+  LayoutDashboard, Plus, Trash2, X, ChevronRight, LogOut, BookOpen, BarChart2, Brain, Flame,
+  Moon, SunMedium,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useTodoStore } from '../store/todoStore';
 import { useAuthStore } from '../store/authStore';
+import { useThemeStore } from '../store/themeStore';
 import { ViewType } from '../types';
 import { NotificationToggle } from './NotificationManager';
+
+const ACCENT_COLORS = ['#7c3aed', '#2563eb', '#059669', '#db2777', '#ea580c', '#dc2626'];
 
 const VIEWS: { id: ViewType; label: string; icon: React.ElementType }[] = [
   { id: 'all', label: 'All Tasks', icon: LayoutDashboard },
@@ -24,12 +28,15 @@ const CATEGORY_COLORS = [
 
 const CATEGORY_ICONS = ['💼', '✨', '💪', '🛍️', '💰', '📚', '🎯', '🏠', '🎨', '🚀'];
 
+type ActiveSection = 'tasks' | 'journal' | 'analytics' | 'meditation' | 'habits';
+
 interface SidebarProps {
-  activeSection: 'tasks' | 'journal' | 'analytics' | 'meditation';
-  onSectionChange: (s: 'tasks' | 'journal' | 'analytics' | 'meditation') => void;
+  activeSection: ActiveSection;
+  onSectionChange: (s: ActiveSection) => void;
+  onOpenSearch?: () => void;
 }
 
-export default function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
+export default function Sidebar({ activeSection, onSectionChange, onOpenSearch }: SidebarProps) {
   const {
     activeView, activeCategoryId, categories, sidebarOpen,
     setActiveView, setActiveCategoryId, addCategory, deleteCategory,
@@ -37,6 +44,7 @@ export default function Sidebar({ activeSection, onSectionChange }: SidebarProps
   } = useTodoStore();
 
   const { currentUser, logout } = useAuthStore();
+  const { mode, accent, toggleMode, setAccent } = useThemeStore();
 
   const [showCatForm, setShowCatForm] = useState(false);
   const [catName, setCatName] = useState('');
@@ -129,6 +137,13 @@ export default function Sidebar({ activeSection, onSectionChange }: SidebarProps
                 >
                   <Brain size={16} />
                   <span className="flex-1 text-left">Meditate</span>
+                </button>
+                <button
+                  className={`nav-item w-full ${activeSection === 'habits' ? 'active' : ''}`}
+                  onClick={() => onSectionChange('habits')}
+                >
+                  <Flame size={16} />
+                  <span className="flex-1 text-left">Habits</span>
                 </button>
               </nav>
             </div>
@@ -246,6 +261,30 @@ export default function Sidebar({ activeSection, onSectionChange }: SidebarProps
 
           {/* User section */}
           <div className="px-3 py-4 border-t border-white/05">
+            {/* Theme controls */}
+            <div className="flex items-center gap-1.5 px-2 mb-3">
+              <button
+                onClick={toggleMode}
+                title={mode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                className="w-7 h-7 rounded-lg flex items-center justify-center text-white/40 hover:text-white/70 hover:bg-white/08 transition-colors"
+              >
+                {mode === 'dark' ? <SunMedium size={14} /> : <Moon size={14} />}
+              </button>
+              <div className="flex items-center gap-1">
+                {ACCENT_COLORS.map((c) => (
+                  <button
+                    key={c}
+                    onClick={() => setAccent(c)}
+                    className="w-4 h-4 rounded-full transition-transform hover:scale-110"
+                    style={{
+                      background: c,
+                      boxShadow: accent === c ? `0 0 0 2px white, 0 0 0 3px ${c}` : 'none',
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+
             {currentUser ? (
               <div className="flex items-center gap-2.5 px-2">
                 {/* Avatar */}
