@@ -12,9 +12,10 @@ import {
   ArrowDown,
   Check,
   Folder,
+  RefreshCw,
 } from 'lucide-react';
 import { useTodoStore } from '../store/todoStore';
-import { Priority, PRIORITY_CONFIG } from '../types';
+import { Priority, Recurrence, PRIORITY_CONFIG } from '../types';
 
 const PRIORITIES: { id: Priority; icon: React.ElementType; label: string }[] = [
   { id: 'urgent', icon: AlertCircle, label: 'Urgent' },
@@ -35,6 +36,7 @@ export default function TaskModal() {
   const [tagInput, setTagInput] = useState('');
   const [subtasks, setSubtasks] = useState<{ id: string; title: string; completed: boolean }[]>([]);
   const [subtaskInput, setSubtaskInput] = useState('');
+  const [recurrence, setRecurrence] = useState<Recurrence>(null);
 
   const titleRef = useRef<HTMLInputElement>(null);
 
@@ -48,6 +50,7 @@ export default function TaskModal() {
         setCategoryId(editingTask.categoryId);
         setTags([...editingTask.tags]);
         setSubtasks([...editingTask.subtasks]);
+        setRecurrence(editingTask.recurrence ?? null);
       } else {
         setTitle('');
         setDescription('');
@@ -56,6 +59,7 @@ export default function TaskModal() {
         setCategoryId(null);
         setTags([]);
         setSubtasks([]);
+        setRecurrence(null);
       }
       setTagInput('');
       setSubtaskInput('');
@@ -73,6 +77,7 @@ export default function TaskModal() {
       categoryId,
       tags,
       subtasks,
+      recurrence,
       completed: editingTask?.completed ?? false,
       starred: editingTask?.starred ?? false,
     };
@@ -242,6 +247,25 @@ export default function TaskModal() {
                     ))}
                   </select>
                 </div>
+              </div>
+
+              {/* Recurrence */}
+              <div>
+                <label className="text-xs font-semibold text-white/40 uppercase tracking-wider block mb-2">
+                  <RefreshCw size={10} className="inline mr-1" />
+                  Repeat
+                </label>
+                <select
+                  className="input-glass appearance-none"
+                  value={recurrence || ''}
+                  onChange={(e) => setRecurrence((e.target.value as Recurrence) || null)}
+                  style={{ colorScheme: 'dark' }}
+                >
+                  <option value="">None</option>
+                  <option value="daily">Daily</option>
+                  <option value="weekly">Weekly</option>
+                  <option value="monthly">Monthly</option>
+                </select>
               </div>
 
               {/* Tags */}

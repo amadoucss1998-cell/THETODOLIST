@@ -49,7 +49,7 @@ export default function TaskList() {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto px-6 pb-24">
+    <div className="flex-1 overflow-y-auto px-6 pb-4">
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}

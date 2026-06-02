@@ -19,6 +19,7 @@ import { Task, PRIORITY_CONFIG } from '../types';
 import { useTodoStore } from '../store/todoStore';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { fireConfetti } from './confetti';
 
 const PRIORITY_ICONS = {
   urgent: AlertCircle,
@@ -44,7 +45,7 @@ export default function TaskCard({ task }: TaskCardProps) {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.4 : 1,
-    zIndex: isDragging ? 50 : 'auto',
+    zIndex: isDragging ? 50 : 'auto' as const,
   };
 
   const cfg = PRIORITY_CONFIG[task.priority];
@@ -71,6 +72,13 @@ export default function TaskCard({ task }: TaskCardProps) {
   const handleDelete = async () => {
     setIsDeleting(true);
     setTimeout(() => deleteTask(task.id), 300);
+  };
+
+  const handleToggleComplete = (e: React.MouseEvent) => {
+    if (!task.completed) {
+      fireConfetti(e.clientX, e.clientY);
+    }
+    toggleComplete(task.id);
   };
 
   return (
@@ -131,7 +139,7 @@ export default function TaskCard({ task }: TaskCardProps) {
 
             {/* Checkbox */}
             <button
-              onClick={() => toggleComplete(task.id)}
+              onClick={handleToggleComplete}
               className={`checkbox-custom ${task.completed ? 'checked' : ''}`}
             >
               <AnimatePresence>
@@ -273,7 +281,7 @@ export default function TaskCard({ task }: TaskCardProps) {
             </span>
           ))}
 
-          {/* Star indicator (always visible) */}
+          {/* Star indicator */}
           {task.starred && (
             <Star size={11} fill="#ffd32a" color="#ffd32a" className="opacity-80" />
           )}

@@ -2,6 +2,24 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --bg-primary: #08080f;
+  --bg-secondary: #0d0d1f;
+  --text-primary: #e2e8f0;
+  --text-secondary: rgba(255,255,255,0.55);
+  --border-color: rgba(255,255,255,0.08);
+  --accent: #7c3aed;
+  --accent-light: #7c3aed20;
+}
+
+[data-theme="light"] {
+  --bg-primary: #f8f7ff;
+  --bg-secondary: #ffffff;
+  --text-primary: #1a1a2e;
+  --text-secondary: rgba(26,26,46,0.6);
+  --border-color: rgba(0,0,0,0.08);
+}
+
 @layer base {
   * {
     box-sizing: border-box;
@@ -13,8 +31,8 @@
   }
 
   body {
-    background-color: #08080f;
-    color: #e2e8f0;
+    background: var(--bg-primary, #08080f);
+    color: var(--text-primary, #e2e8f0);
     font-family: 'Inter', system-ui, sans-serif;
     overflow: hidden;
   }

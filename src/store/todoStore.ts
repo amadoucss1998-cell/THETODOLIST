@@ -1,13 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
-import {
-  Task,
-  Category,
-  Priority,
-  ViewType,
-  Stats,
-} from '../types';
+import { Task, Category, Priority, ViewType, SortOrder, Stats } from '../types';
 import { isToday, isFuture, addDays, startOfDay, parseISO } from 'date-fns';
 
 type TaskInput = Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'order'>;
@@ -19,9 +13,11 @@ interface TodoStore {
   activeCategoryId: string | null;
   searchQuery: string;
   filterPriority: Priority | null;
+  sortOrder: SortOrder;
   isModalOpen: boolean;
   editingTask: Task | null;
   sidebarOpen: boolean;
+  currentUserId: string | null;
 
   addTask: (data: TaskInput) => void;
   updateTask: (id: string, data: Partial<Task>) => void;
@@ -32,6 +28,7 @@ interface TodoStore {
   toggleSubtask: (taskId: string, subtaskId: string) => void;
   deleteSubtask: (taskId: string, subtaskId: string) => void;
   reorderTasks: (activeId: string, overId: string) => void;
+  clearCompleted: () => void;
 
   addCategory: (data: Omit<Category, 'id'>) => void;
   deleteCategory: (id: string) => void;
@@ -40,6 +37,8 @@ interface TodoStore {
   setActiveCategoryId: (id: string | null) => void;
   setSearchQuery: (query: string) => void;
   setFilterPriority: (priority: Priority | null) => void;
+  setSortOrder: (order: SortOrder) => void;
+  setCurrentUserId: (id: string | null) => void;
   openModal: (task?: Task | null) => void;
   closeModal: () => void;
   toggleSidebar: () => void;
@@ -48,6 +47,7 @@ interface TodoStore {
   getStats: () => Stats;
   getCategoryTaskCount: (categoryId: string) => number;
   getViewCount: (view: ViewType) => number;
+  getUserTasks: () => Task[];
 }
 
 const DEFAULT_CATEGORIES: Category[] = [
@@ -64,120 +64,69 @@ const in3Days = addDays(new Date(), 3).toISOString().split('T')[0];
 
 const DEMO_TASKS: Task[] = [
   {
-    id: uuidv4(),
+    id: 'demo-1',
     title: 'Review Q2 product roadmap',
     description: 'Go through all the feature requests and prioritize based on user impact and effort.',
-    completed: false,
-    starred: true,
-    priority: 'urgent',
-    dueDate: today,
-    categoryId: 'work',
-    tags: ['strategy', 'planning'],
+    completed: false, starred: true, priority: 'urgent',
+    dueDate: today, categoryId: 'work', tags: ['strategy', 'planning'],
     subtasks: [
-      { id: uuidv4(), title: 'Review user feedback', completed: true },
-      { id: uuidv4(), title: 'Align with engineering team', completed: false },
-      { id: uuidv4(), title: 'Prepare presentation', completed: false },
+      { id: 'd1a', title: 'Review user feedback', completed: true },
+      { id: 'd1b', title: 'Align with engineering team', completed: false },
+      { id: 'd1c', title: 'Prepare presentation', completed: false },
     ],
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    order: 0,
+    createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), order: 0,
   },
   {
-    id: uuidv4(),
+    id: 'demo-2',
     title: 'Morning workout — chest & back',
     description: 'Bench press 4x8, pull-ups 4x10, cable rows 3x12.',
-    completed: true,
-    starred: false,
-    priority: 'high',
-    dueDate: today,
-    categoryId: 'health',
-    tags: ['fitness'],
+    completed: true, starred: false, priority: 'high',
+    dueDate: today, categoryId: 'health', tags: ['fitness'],
     subtasks: [],
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    order: 1,
+    createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), order: 1,
   },
   {
-    id: uuidv4(),
+    id: 'demo-3',
     title: 'Design new landing page mockups',
     description: 'Create high-fidelity mockups for the new marketing landing page.',
-    completed: false,
-    starred: false,
-    priority: 'high',
-    dueDate: tomorrow,
-    categoryId: 'work',
-    tags: ['design', 'ui'],
+    completed: false, starred: false, priority: 'high',
+    dueDate: tomorrow, categoryId: 'work', tags: ['design', 'ui'],
     subtasks: [
-      { id: uuidv4(), title: 'Sketch wireframes', completed: true },
-      { id: uuidv4(), title: 'Build in Figma', completed: false },
+      { id: 'd3a', title: 'Sketch wireframes', completed: true },
+      { id: 'd3b', title: 'Build in Figma', completed: false },
     ],
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    order: 2,
+    createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), order: 2,
   },
   {
-    id: uuidv4(),
+    id: 'demo-4',
     title: 'Grocery shopping',
     description: 'Vegetables, fruits, protein sources, and snacks for the week.',
-    completed: false,
-    starred: false,
-    priority: 'medium',
-    dueDate: tomorrow,
-    categoryId: 'shopping',
-    tags: ['weekly'],
+    completed: false, starred: false, priority: 'medium',
+    dueDate: tomorrow, categoryId: 'shopping', tags: ['weekly'],
     subtasks: [],
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    order: 3,
+    createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), order: 3,
   },
   {
-    id: uuidv4(),
-    title: 'Read "Atomic Habits" — Chapter 12',
-    description: 'Take notes on habit stacking and environment design.',
-    completed: false,
-    starred: true,
-    priority: 'low',
-    dueDate: in3Days,
-    categoryId: 'personal',
-    tags: ['reading', 'growth'],
-    subtasks: [],
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    order: 4,
-  },
-  {
-    id: uuidv4(),
+    id: 'demo-5',
     title: 'Fix authentication bug in API',
     description: 'JWT tokens expiring too early — investigate middleware logic.',
-    completed: false,
-    starred: false,
-    priority: 'urgent',
-    dueDate: today,
-    categoryId: 'work',
-    tags: ['bug', 'backend'],
+    completed: false, starred: false, priority: 'urgent',
+    dueDate: today, categoryId: 'work', tags: ['bug', 'backend'],
     subtasks: [
-      { id: uuidv4(), title: 'Reproduce the issue', completed: true },
-      { id: uuidv4(), title: 'Review JWT middleware', completed: false },
-      { id: uuidv4(), title: 'Write test coverage', completed: false },
+      { id: 'd5a', title: 'Reproduce the issue', completed: true },
+      { id: 'd5b', title: 'Review JWT middleware', completed: false },
+      { id: 'd5c', title: 'Write test coverage', completed: false },
     ],
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    order: 5,
+    createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), order: 4,
   },
   {
-    id: uuidv4(),
-    title: 'Review monthly budget',
-    description: 'Categorize expenses and check savings goals progress.',
-    completed: false,
-    starred: false,
-    priority: 'medium',
-    dueDate: in3Days,
-    categoryId: 'finance',
-    tags: ['monthly'],
+    id: 'demo-6',
+    title: 'Read “Atomic Habits” — Chapter 12',
+    description: 'Take notes on habit stacking and environment design.',
+    completed: false, starred: true, priority: 'low',
+    dueDate: in3Days, categoryId: 'personal', tags: ['reading', 'growth'],
     subtasks: [],
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    order: 6,
+    createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), order: 5,
   },
 ];
 
@@ -190,14 +139,18 @@ export const useTodoStore = create<TodoStore>()(
       activeCategoryId: null,
       searchQuery: '',
       filterPriority: null,
+      sortOrder: 'smart',
       isModalOpen: false,
       editingTask: null,
       sidebarOpen: true,
+      currentUserId: null,
 
       addTask: (data) => {
         const tasks = get().tasks;
+        const userId = get().currentUserId;
         const newTask: Task = {
           ...data,
+          userId: userId ?? undefined,
           id: uuidv4(),
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
@@ -214,26 +167,27 @@ export const useTodoStore = create<TodoStore>()(
         }));
       },
 
-      deleteTask: (id) => {
-        set((state) => ({ tasks: state.tasks.filter((t) => t.id !== id) }));
-      },
+      deleteTask: (id) => set((state) => ({ tasks: state.tasks.filter((t) => t.id !== id) })),
 
       toggleComplete: (id) => {
         set((state) => ({
-          tasks: state.tasks.map((t) =>
-            t.id === id
-              ? { ...t, completed: !t.completed, updatedAt: new Date().toISOString() }
-              : t
-          ),
+          tasks: state.tasks.map((t) => {
+            if (t.id !== id) return t;
+            const completing = !t.completed;
+            return {
+              ...t,
+              completed: completing,
+              completedAt: completing && t.recurrence ? new Date().toISOString() : null,
+              updatedAt: new Date().toISOString(),
+            };
+          }),
         }));
       },
 
       toggleStar: (id) => {
         set((state) => ({
           tasks: state.tasks.map((t) =>
-            t.id === id
-              ? { ...t, starred: !t.starred, updatedAt: new Date().toISOString() }
-              : t
+            t.id === id ? { ...t, starred: !t.starred, updatedAt: new Date().toISOString() } : t
           ),
         }));
       },
@@ -242,11 +196,7 @@ export const useTodoStore = create<TodoStore>()(
         set((state) => ({
           tasks: state.tasks.map((t) =>
             t.id === taskId
-              ? {
-                  ...t,
-                  subtasks: [...t.subtasks, { id: uuidv4(), title, completed: false }],
-                  updatedAt: new Date().toISOString(),
-                }
+              ? { ...t, subtasks: [...t.subtasks, { id: uuidv4(), title, completed: false }], updatedAt: new Date().toISOString() }
               : t
           ),
         }));
@@ -256,13 +206,7 @@ export const useTodoStore = create<TodoStore>()(
         set((state) => ({
           tasks: state.tasks.map((t) =>
             t.id === taskId
-              ? {
-                  ...t,
-                  subtasks: t.subtasks.map((s) =>
-                    s.id === subtaskId ? { ...s, completed: !s.completed } : s
-                  ),
-                  updatedAt: new Date().toISOString(),
-                }
+              ? { ...t, subtasks: t.subtasks.map((s) => s.id === subtaskId ? { ...s, completed: !s.completed } : s), updatedAt: new Date().toISOString() }
               : t
           ),
         }));
@@ -272,11 +216,7 @@ export const useTodoStore = create<TodoStore>()(
         set((state) => ({
           tasks: state.tasks.map((t) =>
             t.id === taskId
-              ? {
-                  ...t,
-                  subtasks: t.subtasks.filter((s) => s.id !== subtaskId),
-                  updatedAt: new Date().toISOString(),
-                }
+              ? { ...t, subtasks: t.subtasks.filter((s) => s.id !== subtaskId), updatedAt: new Date().toISOString() }
               : t
           ),
         }));
@@ -294,19 +234,27 @@ export const useTodoStore = create<TodoStore>()(
         });
       },
 
+      clearCompleted: () => {
+        const userId = get().currentUserId;
+        set((state) => ({
+          tasks: state.tasks.filter((t) => {
+            if (userId ? t.userId === userId : !t.userId) {
+              return !t.completed;
+            }
+            return true;
+          }),
+        }));
+      },
+
       addCategory: (data) => {
-        const newCat: Category = { ...data, id: uuidv4() };
-        set((state) => ({ categories: [...state.categories, newCat] }));
+        set((state) => ({ categories: [...state.categories, { ...data, id: uuidv4() }] }));
       },
 
       deleteCategory: (id) => {
         set((state) => ({
           categories: state.categories.filter((c) => c.id !== id),
-          tasks: state.tasks.map((t) =>
-            t.categoryId === id ? { ...t, categoryId: null } : t
-          ),
-          activeCategoryId:
-            state.activeCategoryId === id ? null : state.activeCategoryId,
+          tasks: state.tasks.map((t) => t.categoryId === id ? { ...t, categoryId: null } : t),
+          activeCategoryId: state.activeCategoryId === id ? null : state.activeCategoryId,
         }));
       },
 
@@ -314,24 +262,38 @@ export const useTodoStore = create<TodoStore>()(
       setActiveCategoryId: (id) => set({ activeCategoryId: id, activeView: 'all', filterPriority: null }),
       setSearchQuery: (query) => set({ searchQuery: query }),
       setFilterPriority: (priority) => set({ filterPriority: priority }),
-
+      setSortOrder: (order) => set({ sortOrder: order }),
+      setCurrentUserId: (id) => set({ currentUserId: id }),
       openModal: (task = null) => set({ isModalOpen: true, editingTask: task }),
       closeModal: () => set({ isModalOpen: false, editingTask: null }),
       toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
 
-      getFilteredTasks: () => {
-        const { tasks, activeView, activeCategoryId, searchQuery, filterPriority } = get();
-        let filtered = [...tasks];
+      getUserTasks: () => {
+        const { tasks, currentUserId } = get();
+        const base = currentUserId ? tasks.filter((t) => t.userId === currentUserId) : tasks.filter((t) => !t.userId);
+        const now = Date.now();
+        return base.map((t) => {
+          if (!t.completed || !t.recurrence || !t.completedAt) return t;
+          const completedMs = new Date(t.completedAt).getTime();
+          const thresholds: Record<string, number> = { daily: 86400000, weekly: 604800000, monthly: 2592000000 };
+          const threshold = thresholds[t.recurrence];
+          if (threshold && now - completedMs >= threshold) {
+            return { ...t, completed: false, completedAt: null };
+          }
+          return t;
+        });
+      },
 
-        // View filter
+      getFilteredTasks: () => {
+        const { activeView, activeCategoryId, searchQuery, filterPriority, sortOrder } = get();
+        let filtered = get().getUserTasks();
+
         if (activeCategoryId) {
           filtered = filtered.filter((t) => t.categoryId === activeCategoryId);
         } else {
           switch (activeView) {
             case 'today':
-              filtered = filtered.filter(
-                (t) => t.dueDate && isToday(parseISO(t.dueDate))
-              );
+              filtered = filtered.filter((t) => t.dueDate && isToday(parseISO(t.dueDate)));
               break;
             case 'upcoming':
               filtered = filtered.filter((t) => {
@@ -346,42 +308,40 @@ export const useTodoStore = create<TodoStore>()(
             case 'starred':
               filtered = filtered.filter((t) => t.starred);
               break;
-            default:
-              break;
           }
         }
 
-        // Search filter
         if (searchQuery.trim()) {
           const q = searchQuery.toLowerCase();
           filtered = filtered.filter(
-            (t) =>
-              t.title.toLowerCase().includes(q) ||
-              t.description.toLowerCase().includes(q) ||
-              t.tags.some((tag) => tag.toLowerCase().includes(q))
+            (t) => t.title.toLowerCase().includes(q) || t.description.toLowerCase().includes(q) || t.tags.some((tag) => tag.toLowerCase().includes(q))
           );
         }
 
-        // Priority filter
-        if (filterPriority) {
-          filtered = filtered.filter((t) => t.priority === filterPriority);
-        }
+        if (filterPriority) filtered = filtered.filter((t) => t.priority === filterPriority);
 
-        // Sort: incomplete first, then by priority weight, then by due date, then by order
-        const priorityWeight: Record<string, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
+        const pw: Record<string, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
         return filtered.sort((a, b) => {
           if (a.completed !== b.completed) return a.completed ? 1 : -1;
-          const pw = priorityWeight[a.priority] - priorityWeight[b.priority];
-          if (pw !== 0) return pw;
-          if (a.dueDate && b.dueDate) return a.dueDate.localeCompare(b.dueDate);
-          if (a.dueDate) return -1;
-          if (b.dueDate) return 1;
-          return a.order - b.order;
+          switch (sortOrder) {
+            case 'dueDate':
+              if (a.dueDate && b.dueDate) return a.dueDate.localeCompare(b.dueDate);
+              return a.dueDate ? -1 : b.dueDate ? 1 : a.order - b.order;
+            case 'priority': return pw[a.priority] - pw[b.priority];
+            case 'alpha': return a.title.localeCompare(b.title);
+            case 'created': return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+            default: {
+              const p = pw[a.priority] - pw[b.priority];
+              if (p !== 0) return p;
+              if (a.dueDate && b.dueDate) return a.dueDate.localeCompare(b.dueDate);
+              return a.dueDate ? -1 : b.dueDate ? 1 : a.order - b.order;
+            }
+          }
         });
       },
 
       getStats: () => {
-        const { tasks } = get();
+        const tasks = get().getUserTasks();
         const total = tasks.length;
         const completed = tasks.filter((t) => t.completed).length;
         const inProgress = total - completed;
@@ -390,35 +350,26 @@ export const useTodoStore = create<TodoStore>()(
         return { total, completed, inProgress, urgent, completionRate };
       },
 
-      getCategoryTaskCount: (categoryId) => {
-        return get().tasks.filter((t) => t.categoryId === categoryId && !t.completed).length;
-      },
+      getCategoryTaskCount: (categoryId) =>
+        get().getUserTasks().filter((t) => t.categoryId === categoryId && !t.completed).length,
 
       getViewCount: (view) => {
-        const { tasks } = get();
+        const tasks = get().getUserTasks();
         switch (view) {
-          case 'all':
-            return tasks.filter((t) => !t.completed).length;
-          case 'today':
-            return tasks.filter((t) => t.dueDate && isToday(parseISO(t.dueDate)) && !t.completed).length;
+          case 'all': return tasks.filter((t) => !t.completed).length;
+          case 'today': return tasks.filter((t) => t.dueDate && isToday(parseISO(t.dueDate)) && !t.completed).length;
           case 'upcoming':
             return tasks.filter((t) => {
               if (!t.dueDate || t.completed) return false;
               const d = parseISO(t.dueDate);
               return isFuture(d) && !isToday(d) && d <= addDays(startOfDay(new Date()), 7);
             }).length;
-          case 'completed':
-            return tasks.filter((t) => t.completed).length;
-          case 'starred':
-            return tasks.filter((t) => t.starred && !t.completed).length;
-          default:
-            return 0;
+          case 'completed': return tasks.filter((t) => t.completed).length;
+          case 'starred': return tasks.filter((t) => t.starred && !t.completed).length;
+          default: return 0;
         }
       },
     }),
-    {
-      name: 'taskflow-storage',
-      version: 1,
-    }
+    { name: 'taskflow-storage', version: 2 }
   )
 );
