@@ -9,13 +9,15 @@ import KeyboardShortcuts from './components/KeyboardShortcuts';
 import AuthScreen from './components/AuthScreen';
 import NotificationManager from './components/NotificationManager';
 import JournalPage from './components/JournalPage';
+import AnalyticsPage from './components/AnalyticsPage';
+import PomodoroTimer from './components/PomodoroTimer';
 import { useAuthStore } from './store/authStore';
 import { useTodoStore } from './store/todoStore';
 
 export default function App() {
   const { currentUser } = useAuthStore();
   const { setCurrentUserId } = useTodoStore();
-  const [activeSection, setActiveSection] = useState<'tasks' | 'journal'>('tasks');
+  const [activeSection, setActiveSection] = useState<'tasks' | 'journal' | 'analytics'>('tasks');
 
   useEffect(() => {
     setCurrentUserId(currentUser?.id ?? null);
@@ -41,14 +43,17 @@ export default function App() {
             <TaskList />
             <QuickAddBar />
           </>
-        ) : (
+        ) : activeSection === 'journal' ? (
           <JournalPage />
+        ) : (
+          <AnalyticsPage />
         )}
       </main>
 
       <TaskModal />
       <KeyboardShortcuts />
       <NotificationManager />
+      <PomodoroTimer />
     </div>
   );
 }

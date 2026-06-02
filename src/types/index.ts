@@ -17,6 +17,8 @@ export interface Subtask {
   completed: boolean;
 }
 
+export type Recurrence = 'daily' | 'weekly' | 'monthly' | null;
+
 export interface Task {
   id: string;
   userId?: string;
@@ -29,6 +31,8 @@ export interface Task {
   categoryId: string | null;
   tags: string[];
   subtasks: Subtask[];
+  recurrence?: Recurrence;
+  completedAt?: string | null;
   createdAt: string;
   updatedAt: string;
   order: number;

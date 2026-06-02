@@ -171,9 +171,16 @@ export const useTodoStore = create<TodoStore>()(
 
       toggleComplete: (id) => {
         set((state) => ({
-          tasks: state.tasks.map((t) =>
-            t.id === id ? { ...t, completed: !t.completed, updatedAt: new Date().toISOString() } : t
-          ),
+          tasks: state.tasks.map((t) => {
+            if (t.id !== id) return t;
+            const completing = !t.completed;
+            return {
+              ...t,
+              completed: completing,
+              completedAt: completing && t.recurrence ? new Date().toISOString() : null,
+              updatedAt: new Date().toISOString(),
+            };
+          }),
         }));
       },
 
@@ -263,8 +270,18 @@ export const useTodoStore = create<TodoStore>()(
 
       getUserTasks: () => {
         const { tasks, currentUserId } = get();
-        if (currentUserId) return tasks.filter((t) => t.userId === currentUserId);
-        return tasks.filter((t) => !t.userId);
+        const base = currentUserId ? tasks.filter((t) => t.userId === currentUserId) : tasks.filter((t) => !t.userId);
+        const now = Date.now();
+        return base.map((t) => {
+          if (!t.completed || !t.recurrence || !t.completedAt) return t;
+          const completedMs = new Date(t.completedAt).getTime();
+          const thresholds: Record<string, number> = { daily: 86400000, weekly: 604800000, monthly: 2592000000 };
+          const threshold = thresholds[t.recurrence];
+          if (threshold && now - completedMs >= threshold) {
+            return { ...t, completed: false, completedAt: null };
+          }
+          return t;
+        });
       },
 
       getFilteredTasks: () => {

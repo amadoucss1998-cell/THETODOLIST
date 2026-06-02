@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   CheckSquare, Sun, Calendar, Star, CheckCircle2,
-  LayoutDashboard, Plus, Trash2, X, ChevronRight, LogOut, BookOpen,
+  LayoutDashboard, Plus, Trash2, X, ChevronRight, LogOut, BookOpen, BarChart2,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useTodoStore } from '../store/todoStore';
@@ -25,8 +25,8 @@ const CATEGORY_COLORS = [
 const CATEGORY_ICONS = ['💼', '✨', '💪', '🛍️', '💰', '📚', '🎯', '🏠', '🎨', '🚀'];
 
 interface SidebarProps {
-  activeSection: 'tasks' | 'journal';
-  onSectionChange: (s: 'tasks' | 'journal') => void;
+  activeSection: 'tasks' | 'journal' | 'analytics';
+  onSectionChange: (s: 'tasks' | 'journal' | 'analytics') => void;
 }
 
 export default function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
@@ -115,6 +115,13 @@ export default function Sidebar({ activeSection, onSectionChange }: SidebarProps
                 >
                   <BookOpen size={16} />
                   <span className="flex-1 text-left">Journal & Notes</span>
+                </button>
+                <button
+                  className={`nav-item w-full ${activeSection === 'analytics' ? 'active' : ''}`}
+                  onClick={() => onSectionChange('analytics')}
+                >
+                  <BarChart2 size={16} />
+                  <span className="flex-1 text-left">Analytics</span>
                 </button>
               </nav>
             </div>
