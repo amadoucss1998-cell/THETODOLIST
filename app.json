@@ -1,0 +1,23 @@
+{
+  "expo": {
+    "name": "TaskFlow",
+    "slug": "taskflow",
+    "scheme": "taskflow",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#08080f",
+    "icon": "./assets/icon.png",
+    "splash": { "image": "./assets/splash.png", "backgroundColor": "#08080f" },
+    "ios": { "supportsTablet": true, "bundleIdentifier": "com.taskflow.app" },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#7c3aed"
+      },
+      "package": "com.taskflow.app"
+    },
+    "plugins": ["expo-router"],
+    "experiments": { "typedRoutes": true }
+  }
+}
