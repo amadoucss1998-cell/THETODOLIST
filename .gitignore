@@ -1,1 +1,5 @@
-node_modules/\ndist-check/\n.expo/\n*.jks\n*.keystore
+node_modules/
+dist-check/
+.expo/
+*.jks
+*.keystore
